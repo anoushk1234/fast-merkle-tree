@@ -38,8 +38,12 @@ impl MerkleTree {
     }
     pub fn calculate_next_level_len(current_level_len: usize) -> usize {
         if current_level_len > 1 {
-            (current_level_len as f64 / 2.0).ceil() as usize // maybe subtract one from current
-                                                             // level
+            // (current_level_len as f64 / 2.0).ceil() as usize
+            if current_level_len % 2 == 0 {
+                current_level_len / 2
+            } else {
+                (current_level_len + 1) / 2
+            }
         } else {
             0
         }
@@ -49,8 +53,13 @@ impl MerkleTree {
             let mut level_leaf_count = leaf_count as usize;
             let mut node_count = level_leaf_count;
             while level_leaf_count > 1 {
-                node_count += (level_leaf_count as f64 / 2.0).ceil() as usize;
-                level_leaf_count = (level_leaf_count as f64 / 2.0).ceil() as usize;
+                level_leaf_count = if level_leaf_count % 2 == 0 {
+                    level_leaf_count / 2
+                } else {
+                    (level_leaf_count + 1) / 2
+                };
+                node_count += level_leaf_count;
+                // level_leaf_count =  (level_leaf_count as f64 / 2.0).ceil() as usize;
             }
             node_count
         } else {
@@ -59,7 +68,7 @@ impl MerkleTree {
     }
     pub fn new(leaf_count: usize) -> Self {
         let max_capacity = MerkleTree::calculate_max_capacity(leaf_count);
-        println!("max_capacity {:?}", max_capacity);
+        // println!("max_capacity {:?}", max_capacity);
         let mut nodes = Vec::with_capacity(max_capacity);
         for _ in 0..leaf_count {
             nodes.push(DEFAULT_LEAF.into());
@@ -85,9 +94,8 @@ impl MerkleTree {
         let mut current_level: usize = height;
         let mut prev_level_len: usize = 0;
         let mut current_level_len: usize = self.leaf_count;
-        // let mut total_level_len: usize = 0;
 
-        let mut to_push = Vec::new();
+        let mut to_push = Vec::with_capacity(current_level_len);
         let mut pairs = self.nodes.chunks(2);
         while current_level > 0 {
             // println!(
@@ -109,11 +117,11 @@ impl MerkleTree {
                 to_push.push(inter_node);
             } else {
                 self.nodes.append(&mut to_push);
-                to_push = Vec::new();
                 current_level -= 1;
 
                 prev_level_len += current_level_len;
-                current_level_len = MerkleTree::calculate_next_level_len(current_level_len);
+                current_level_len = Self::calculate_next_level_len(current_level_len);
+                to_push = Vec::with_capacity(current_level_len);
                 // println!("check nodes {:?}", self.nodes.len());
                 // println!(
                 //     "check level lens {:?} {:?}",

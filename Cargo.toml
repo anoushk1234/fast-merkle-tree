@@ -13,3 +13,10 @@ fast-math = "0.1.1"
 rs_merkle = "1.4"
 hex = "0.4.3"
 solana-merkle-tree = "1.16.15"
+glassbench = "0.3.5"
+lipsum = "0.9"
+solana-sdk = "1.16.15"
+
+[[bench]]
+name = "merkle_bench"
+harness = false

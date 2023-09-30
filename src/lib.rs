@@ -1,1 +1,2 @@
-pub mod merkle;
+mod merkle;
+pub use merkle::*;
