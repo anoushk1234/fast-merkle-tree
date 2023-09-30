@@ -28,20 +28,15 @@ pub struct MerkleTree {
     pub nodes: Vec<Hash>,
 }
 
-// impl Default for MerkleTree{
-//     fn default() -> Self {
-//         Self { leaf_count: 0, nodes: Vec::from(&[]) }
-//     }
-// }
 impl MerkleTree {
-    pub fn calc_height(leaf_count: usize) -> usize {
+    pub fn calculate_height(leaf_count: usize) -> usize {
         if leaf_count > 0 {
             (fast_math::log2(leaf_count as f32)).ceil() as usize
         } else {
             0
         }
     }
-    pub fn calc_next_level_len(current_level_len: usize) -> usize {
+    pub fn calculate_next_level_len(current_level_len: usize) -> usize {
         if current_level_len > 1 {
             (current_level_len as f64 / 2.0).ceil() as usize // maybe subtract one from current
                                                              // level
@@ -49,7 +44,7 @@ impl MerkleTree {
             0
         }
     }
-    pub fn calc_max_capacity(leaf_count: usize) -> usize {
+    pub fn calculate_max_capacity(leaf_count: usize) -> usize {
         if leaf_count > 0 {
             let mut level_leaf_count = leaf_count as usize;
             let mut node_count = level_leaf_count;
@@ -63,7 +58,7 @@ impl MerkleTree {
         }
     }
     pub fn new(leaf_count: usize) -> Self {
-        let max_capacity = MerkleTree::calc_max_capacity(leaf_count);
+        let max_capacity = MerkleTree::calculate_max_capacity(leaf_count);
         println!("max_capacity {:?}", max_capacity);
         let mut nodes = Vec::with_capacity(max_capacity);
         for _ in 0..leaf_count {
@@ -86,7 +81,7 @@ impl MerkleTree {
         self.nodes[0..self.leaf_count].get(leaf_index)
     }
     pub fn get_root(self: &mut Self) -> Option<&Hash> {
-        let height = Self::calc_height(self.leaf_count);
+        let height = Self::calculate_height(self.leaf_count);
         let mut current_level: usize = height;
         let mut prev_level_len: usize = 0;
         let mut current_level_len: usize = self.leaf_count;
@@ -95,20 +90,20 @@ impl MerkleTree {
         let mut to_push = Vec::new();
         let mut pairs = self.nodes.chunks(2);
         while current_level > 0 {
-            println!(
-                "current_level_len {:?} prev_level_len {:?} height {:?}",
-                current_level_len, prev_level_len, current_level
-            );
+            // println!(
+            //     "current_level_len {:?} prev_level_len {:?} height {:?}",
+            //     current_level_len, prev_level_len, current_level
+            // );
             let pair = pairs.next();
             if let Some([lnode, rnode]) = pair {
-                println!(
-                    "lsib {:?} rsib {:?} level {:?}",
-                    lnode, rnode, current_level
-                );
+                // println!(
+                //     "lsib {:?} rsib {:?} level {:?}",
+                //     lnode, rnode, current_level
+                // );
                 let inter_node = hash_node!(lnode, rnode);
                 to_push.push(inter_node);
             } else if let Some([lnode]) = pair {
-                println!("lsib {:?} level {:?}", lnode, current_level);
+                // println!("lsib {:?} level {:?}", lnode, current_level);
                 //                current_level_len += 1
                 let inter_node = hash_node!(lnode, lnode);
                 to_push.push(inter_node);
@@ -117,30 +112,63 @@ impl MerkleTree {
                 to_push = Vec::new();
                 current_level -= 1;
 
-                // if current_level_len % 2 != 0 {
-                //     current_level_len += 1;
-                // }
                 prev_level_len += current_level_len;
-                current_level_len = MerkleTree::calc_next_level_len(current_level_len);
-                println!("check nodes {:?}", self.nodes.len());
-                println!(
-                    "check level lens {:?} {:?}",
-                    prev_level_len, current_level_len
-                );
+                current_level_len = MerkleTree::calculate_next_level_len(current_level_len);
+                // println!("check nodes {:?}", self.nodes.len());
+                // println!(
+                //     "check level lens {:?} {:?}",
+                //     prev_level_len, current_level_len
+                // );
                 pairs =
                     self.nodes[(prev_level_len)..(prev_level_len + current_level_len)].chunks(2);
             }
         }
-        println!("tree {:?}", self.nodes);
         self.nodes.iter().last()
     }
-}
+    pub fn get_opening(self: &Self, leaf_index: usize) -> Option<Vec<Hash>> {
+        if leaf_index > self.leaf_count - 1 {
+            return None;
+        };
+        let height = Self::calculate_height(self.leaf_count);
+        let mut current_index = leaf_index;
+        let mut current_level_len: usize = self.leaf_count;
+        let mut current_level: usize = height + 1;
+        let mut path: Vec<Hash> = vec![];
 
-// #[derive(Error, Debug)]
-// pub enum MerkleTreeError{
-//     #[error("Error inserting leaf into the Merkle Tree")]
-//     InsertError(String)
-// }
+        let mut right_node = None;
+        let mut left_node = None;
+        let mut current_level_nodes = &self.nodes[0..self.leaf_count];
+        let mut prev_level_len: usize = 0;
+        while current_level > 0 {
+            match (left_node, right_node) {
+                (Some(lnode), None) => path.push(lnode),
+                (None, Some(rnode)) => path.push(rnode),
+                _ => {}
+            }
+            if current_index % 2 == 0 {
+                if current_index < current_level_len - 1 {
+                    right_node = Some(current_level_nodes[current_index + 1]);
+                } else {
+                    right_node = Some(current_level_nodes[current_index]);
+                }
+            } else {
+                left_node = Some(current_level_nodes[current_index - 1]);
+                right_node = None;
+            }
+            println!(
+                "Level: {:?} Nodes: {:?} Index: {:?}",
+                current_level, current_level_nodes, current_index
+            );
+            current_index /= 2;
+            prev_level_len += current_level_len;
+            current_level_len = Self::calculate_next_level_len(current_level_len);
+            current_level -= 1;
+            current_level_nodes = &self.nodes[prev_level_len..(prev_level_len + current_level_len)];
+        }
+
+        Some(path)
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -154,25 +182,27 @@ mod tests {
         b"my", b"very", b"eager", b"mother", b"just", b"served", b"us", b"nine", b"pizzas",
         b"make", b"prime",
     ];
-    const PROTO: &[&[u8]] = &[
-        b"my", b"very", b"eager", b"mother", b"just", b"served", b"us",
-    ];
+    const PROTO: &[&[u8]] = &[b"my", b"very", b"eager", b"mother", b"just", b"served"];
     #[test]
     fn tryit() {
-        let mut k = MerkleTree::new(7);
-        println!("h2 {:?}", MerkleTree::calc_max_capacity(10));
-        println!("h4 {:?}", MerkleTree::calc_height(10));
-        println!("h4 {:?}", MerkleTree::calc_height(8));
-        println!("h4 {:?}", MerkleTree::calc_height(6));
-        println!("h4 {:?}", MerkleTree::calc_height(4));
-        println!("h4 {:?}", MerkleTree::calc_height(2));
-        println!("h4 {:?}", MerkleTree::calc_height(1));
+        let mut k = MerkleTree::new(6);
+        // println!("h2 {:?}", MerkleTree::calculate_max_capacity(10));
+        // println!("h4 {:?}", MerkleTree::calculate_height(10));
+        // println!("h4 {:?}", MerkleTree::calculate_height(8));
+        // println!("h4 {:?}", MerkleTree::calculate_height(6));
+        // println!("h4 {:?}", MerkleTree::calculate_height(4));
+        // println!("h4 {:?}", MerkleTree::calculate_height(2));
+        // println!("h4 {:?}", MerkleTree::calculate_height(1));
 
         for item in PROTO {
             k.insert(item);
         }
         let root = k.get_root();
         println!("MY_MERKLE_ROOT: {:?}", root.unwrap());
+        for (i, item) in k.nodes.iter().enumerate() {
+            println!("INDEX: {:?} ITEM: {:?}", i, item);
+        }
+        println!("MY_PROOF: {:?}", k.get_opening(5));
         let mt = SMT::new(PROTO);
 
         println!("SOLANAS_MERKLE_ROOT: {:?}", mt.get_root().unwrap());
