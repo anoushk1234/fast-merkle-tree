@@ -23,6 +23,7 @@ a subjective preference and code that is generally considered awful.(like puttin
   <img src="images/1-after.png" alt="After">
   <figcaption>After</figcaption>
 </figure>
+
 2. Pre-allocating vectors since we know the capacity of the tree also saves unnessary allocations
 in the heap saving us from overhead of making syscalls(due to context switching). 
 
