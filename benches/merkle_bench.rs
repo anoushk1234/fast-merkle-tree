@@ -10,7 +10,7 @@ use {
 fn benchmark_merkle_tree(b: &mut Bench) {
     let mut leaves = vec![];
     let leaf_count: usize = 1024;
-    for i in 0..leaf_count {
+    for _ in 0..leaf_count {
         leaves.push(Signature::new_unique().to_string().as_bytes().to_owned());
     }
     b.task(
@@ -22,9 +22,9 @@ fn benchmark_merkle_tree(b: &mut Bench) {
             task.iter(|| {
                 let mut merkle_tree = ElusivMerkleTree::new(leaf_count);
                 for leaf in leaves.clone() {
-                    merkle_tree.insert(leaf);
+                    let _ = merkle_tree.insert(leaf);
                 }
-                let root = merkle_tree.get_root();
+                let _root = merkle_tree.get_root();
             });
         },
     );
@@ -37,7 +37,7 @@ fn benchmark_merkle_tree(b: &mut Bench) {
         |task| {
             task.iter(|| {
                 let solana_merkle = SolanaMerkleTree::new(leaves.as_slice());
-                let root = solana_merkle.get_root();
+                let _root = solana_merkle.get_root();
             });
         },
     );
@@ -53,7 +53,7 @@ fn benchmark_merkle_tree(b: &mut Bench) {
                 let hashed_leaves: Vec<Hash> =
                     leaves.par_iter().map(|leaf| hash_leaf!(leaf)).collect();
                 merkle_tree.nodes = hashed_leaves;
-                let root = merkle_tree.get_root();
+                let _root = merkle_tree.get_root();
             });
         },
     );
