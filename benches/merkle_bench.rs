@@ -1,6 +1,11 @@
 use {
-    elusiv_merkle_tree::MerkleTree as ElusivMerkleTree, glassbench::*, lipsum::lipsum,
-    solana_merkle_tree::MerkleTree as SolanaMerkleTree, solana_sdk::signature::Signature,
+    elusiv_merkle_tree::{hash_leaf, MerkleTree as ElusivMerkleTree, LEAF_PREFIX},
+    glassbench::*,
+    lipsum::lipsum,
+    rayon::prelude::*,
+    solana_merkle_tree::MerkleTree as SolanaMerkleTree,
+    solana_program::hash::{hashv, Hash},
+    solana_sdk::signature::Signature,
 };
 
 pub const SAMPLE: &[&[u8]] = &[
@@ -22,9 +27,11 @@ fn benchmark_merkle_tree(b: &mut Bench) {
         leaves.push(Signature::new_unique().to_string().as_bytes().to_owned());
     }
     // println!("{}", lipsum(25));
-
     b.task(
-        format!("elusiv-merkle-tree | {} leaves", leaf_count),
+        format!(
+            "elusiv-merkle-tree | {} leaves | Insert sequential & get root",
+            leaf_count
+        ),
         |task| {
             task.iter(|| {
                 let mut merkle_tree = ElusivMerkleTree::new(leaf_count);
@@ -37,11 +44,30 @@ fn benchmark_merkle_tree(b: &mut Bench) {
     );
 
     b.task(
-        format!("solana-merkle-tree | {} leaves", leaf_count),
+        format!(
+            "solana-merkle-tree | {} leaves | Insert sequential & get root",
+            leaf_count
+        ),
         |task| {
             task.iter(|| {
                 let solana_merkle = SolanaMerkleTree::new(leaves.as_slice());
                 let root = solana_merkle.get_root();
+            });
+        },
+    );
+
+    b.task(
+        format!(
+            "elusiv-merkle-tree | {} leaves | Insert parallel & get root",
+            leaf_count
+        ),
+        |task| {
+            task.iter(|| {
+                let mut merkle_tree = ElusivMerkleTree::new(leaf_count);
+                let hashed_leaves: Vec<Hash> =
+                    leaves.par_iter().map(|leaf| hash_leaf!(leaf)).collect();
+                merkle_tree.nodes = hashed_leaves;
+                let root = merkle_tree.get_root();
             });
         },
     );
