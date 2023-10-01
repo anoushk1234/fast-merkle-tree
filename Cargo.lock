@@ -875,11 +875,7 @@ version = "0.1.0"
 dependencies = [
  "fast-math",
  "glassbench",
- "hex",
- "lipsum",
  "rayon",
- "rs_merkle",
- "sha2 0.10.8",
  "solana-merkle-tree",
  "solana-program",
  "solana-sdk",
@@ -1100,12 +1096,6 @@ checksum = "62b467343b94ba476dcb2500d242dadbb39557df889310ac77c5d99100aaac33"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "hex"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hmac"
@@ -1356,16 +1346,6 @@ name = "linux-raw-sys"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3852614a3bd9ca9804678ba6be5e3b8ce76dfc902cae004e3e0c44051b6e88db"
-
-[[package]]
-name = "lipsum"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c5e9ef2d2ad6fe67a59ace27c203c8d3a71d195532ee82e3bbe0d5f9a9ca541"
-dependencies = [
- "rand 0.8.5",
- "rand_chacha 0.3.1",
-]
 
 [[package]]
 name = "lock_api"
@@ -1800,15 +1780,6 @@ name = "regex-syntax"
 version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dbb5fb1acd8a1a18b3dd5be62d25485eb770e05afb408a9627d14d451bae12da"
-
-[[package]]
-name = "rs_merkle"
-version = "1.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05225752ca6ede4cb1b73aa37ce3904affd042e98f28246f56f438ebfd47a810"
-dependencies = [
- "sha2 0.10.8",
-]
 
 [[package]]
 name = "rusqlite"
