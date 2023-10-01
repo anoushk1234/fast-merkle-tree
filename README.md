@@ -1,8 +1,25 @@
 # Elusiv Merkle Tree Assignment
 
 
-## Algorithm
+## Properties
+- Adapts to any height
+- O(n) efficiency to construct the root
+- Methods to insert and get a leaf.
+- Get an opening and also verify it against a root.
+- Hash functions are abstracted so you can replace it with another.
+- Default leaf is h(0)
 
+## Usage
+
+Run the tests:
+```rs
+cargo test
+```
+
+Run the benchmark:
+```
+cargo bench
+```
 ## Benchmarks
 ![Benchmark-1](images/benchmark-1.png)
 ## Optimizations & Readability
@@ -13,7 +30,7 @@ is also a subjective thing but there's a difference between code that is
 a subjective preference and code that is generally considered awful.(like putting everything in one lib.rs or over abstraction).
 
 ### Algorithmic Improvements
-1. Since the leaves are pre-filled with defaults, when inserting we can't simply push the hash of the data so the naive approach is to loop until you find a default value and replace it. However this is O(n!) so instead I made the tree to save the current index it should add the leaf at and this helps keep track of which index to replace the leaf. This makes the efficiency closer to O(1) and resulted in a mean time ~800 micro secs faster.
+1. Since the leaves are pre-filled with defaults, when inserting we can't simply push the hash of the data so the naive approach is to loop until you find a default value and replace it. However this is O(n!) so instead I made the tree to save the current index it should add the leaf at and this helps keep track of which index to replace the leaf. This resulted in a mean time ~800 micro secs faster.
 
     <figure>
     <img src="images/1-before.png" alt="Before">

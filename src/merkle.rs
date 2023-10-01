@@ -1,5 +1,5 @@
 // use rayon::prelude::*;
-use solana_program::hash::{hash, hashv, Hash};
+use solana_program::hash::{hashv, Hash};
 use thiserror::Error;
 pub const DEFAULT_LEAF: [u8; 32] = [
     110, 52, 11, 156, 255, 179, 122, 152, 156, 165, 68, 230, 187, 120, 10, 44, 120, 144, 29, 63,
@@ -239,8 +239,7 @@ mod tests {
 
     use super::*;
 
-    use solana_merkle_tree::MerkleTree as SMT;
-    use solana_program::hash::{hashv, Hash};
+    use solana_program::hash::Hash;
 
     pub const SAMPLE: &[&[u8]] = &[
         b"lorem",
@@ -281,7 +280,7 @@ mod tests {
         let mut merkle_tree = MerkleTree::new(SAMPLE.len());
 
         for leaf in SAMPLE {
-            merkle_tree.insert(leaf);
+            let _ = merkle_tree.insert(leaf);
         }
 
         let root = merkle_tree.get_root();
@@ -293,9 +292,9 @@ mod tests {
         let mut merkle_tree = MerkleTree::new(SAMPLE.len());
 
         for leaf in SAMPLE {
-            merkle_tree.insert(leaf);
+            let _ = merkle_tree.insert(leaf);
         }
-        merkle_tree.get_root();
+        let _ = merkle_tree.get_root();
 
         let opening = merkle_tree.get_opening(9).unwrap();
         assert_eq!(opening.len(), 4);
@@ -304,41 +303,30 @@ mod tests {
         assert!(is_valid.unwrap())
     }
     #[test]
-    fn tryit() {
-        let mut k = MerkleTree::new(10);
-        // println!("h2 {:?}", MerkleTree::calculate_max_capacity(10));
-        // println!("h4 {:?}", MerkleTree::calculate_height(10));
-        // println!("h4 {:?}", MerkleTree::calculate_height(8));
-        // println!("h4 {:?}", MerkleTree::calculate_height(6));
-        // println!("h4 {:?}", MerkleTree::calculate_height(4));
-        // println!("h4 {:?}", MerkleTree::calculate_height(2));
-        // println!("h4 {:?}", MerkleTree::calculate_height(1));
-        for item in SAMPLE {
-            let _ = k.insert(item);
-            // println!("res: {:?}", res.is_some());
+    fn test_invalid_index_opening() {
+        let mut merkle_tree = MerkleTree::new(SAMPLE.len());
+
+        for leaf in SAMPLE {
+            let _ = merkle_tree.insert(leaf);
         }
-        // let root = k.get_root();
-        //let opening = k.get_opening(3).unwrap();
-        // for (i, item) in k.nodes.iter().enumerate() {
-        //     println!("INDEX: {:?} ITEM: {:?}", i, item);
-        // }
-        //
-        // println!("TREE: {:?}", opening);
-        // let mut verify_root = Hash::default();
-        // for i in 0..opening.len() {
-        //     if i !== 0{
-        //     let lnode = opening[i].to_bytes();
-        //     let rnode = opening[i + 1].to_bytes();
-        //     verify_root = hash_node!(lnode, rnode);
-        //             }
-        //     else{
-        //         verify_root = hash_leaf
-        //     }
-        //     }
-        // println!("MY_PROOF: {:?}", verify_root);
-        let mt = SMT::new(SAMPLE);
-        //for item in mt.find_path(9).unwrap() {
-        println!("SOLANAS_MERKLE: {:?}", mt.find_path(9).unwrap());
-        println!("root: {:?}", mt.get_root());
+        let _ = merkle_tree.get_root();
+
+        let opening = merkle_tree.get_opening(10);
+        matches!(opening, Err(_));
+    }
+
+    #[test]
+    fn test_invalid_verify_opening() {
+        let mut merkle_tree = MerkleTree::new(SAMPLE.len());
+
+        for leaf in SAMPLE {
+            let _ = merkle_tree.insert(leaf);
+        }
+        let _ = merkle_tree.get_root();
+
+        let opening = merkle_tree.get_opening(9).unwrap();
+        let is_valid = merkle_tree.verify_opening(opening, Hash::new_unique(), 9);
+        assert!(is_valid.is_ok());
+        assert!(!is_valid.unwrap())
     }
 }

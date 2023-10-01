@@ -1,7 +1,6 @@
 use {
     elusiv_merkle_tree::{hash_leaf, MerkleTree as ElusivMerkleTree, LEAF_PREFIX},
     glassbench::*,
-    lipsum::lipsum,
     rayon::prelude::*,
     solana_merkle_tree::MerkleTree as SolanaMerkleTree,
     solana_program::hash::{hashv, Hash},
@@ -14,7 +13,6 @@ fn benchmark_merkle_tree(b: &mut Bench) {
     for i in 0..leaf_count {
         leaves.push(Signature::new_unique().to_string().as_bytes().to_owned());
     }
-    // println!("{}", lipsum(25));
     b.task(
         format!(
             "elusiv-merkle-tree | {} leaves | Insert sequential & get root",
