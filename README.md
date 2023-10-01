@@ -11,7 +11,7 @@ is also a subjective thing but there's a difference between code that is
 a subjective preference and code that is generally considered awful.(like putting everything in one lib.rs or over abstraction).
 
 ### Algorithmic Improvements
-1. Since the leaves are pre-filled with defaults, when inserting we can't simply push the hash of the data so the naive approach is to loop until you find a default value and replace it. However this O(n<sup>2</sup>) so instead I made the tree to save the current index it should add the leaf at and this helps keep track of which index to replace the leaf. This makes the efficiency closer to O(1) and resulted in a mean time ~800 micro secs faster.
+1. Since the leaves are pre-filled with defaults, when inserting we can't simply push the hash of the data so the naive approach is to loop until you find a default value and replace it. However this O(n!) so instead I made the tree to save the current index it should add the leaf at and this helps keep track of which index to replace the leaf. This makes the efficiency closer to O(1) and resulted in a mean time ~800 micro secs faster.
 
 <!-- ![Before](images/1-before.png)
 ![After](images/1-after.png) -->

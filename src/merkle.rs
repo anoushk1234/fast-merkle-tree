@@ -1,4 +1,4 @@
-use rayon::prelude::*;
+// use rayon::prelude::*;
 use solana_program::hash::{hash, hashv, Hash};
 use thiserror::Error;
 pub const DEFAULT_LEAF: [u8; 32] = [
@@ -19,6 +19,7 @@ macro_rules! hash_leaf {
 }
 macro_rules! hash_node {
     ($lnode:ident,$rnode:ident) => {
+        // The hash function can be easily replace with any other
         hashv(&[NODE_PREFIX, $lnode.as_ref(), $rnode.as_ref()])
     };
 }
@@ -31,6 +32,7 @@ pub struct MerkleTree {
 }
 
 impl MerkleTree {
+    /// Calculates the height of a tree with n leaves (n = 2^h).
     pub fn calculate_height(leaf_count: usize) -> usize {
         if leaf_count > 0 {
             fast_math::log2(leaf_count as f32).ceil() as usize
@@ -38,9 +40,9 @@ impl MerkleTree {
             0
         }
     }
+    /// Returns the length of array for the next level of the tree.
     pub fn calculate_next_level_len(current_level_len: usize) -> usize {
         if current_level_len > 1 {
-            // (current_level_len as f64 / 2.0).ceil() as usize
             if current_level_len % 2 == 0 {
                 current_level_len / 2
             } else {
@@ -50,40 +52,32 @@ impl MerkleTree {
             0
         }
     }
+    /// Returns the vector capacity required for a tree of given leaf count.
     pub fn calculate_max_capacity(leaf_count: usize) -> usize {
         if leaf_count > 0 {
             let mut level_leaf_count = leaf_count as usize;
             let mut node_count = level_leaf_count;
             while level_leaf_count > 1 {
-                // level_leaf_count = (level_leaf_count as f64 / 2.0).ceil() as usize;
                 level_leaf_count = if level_leaf_count % 2 == 0 {
                     level_leaf_count / 2
                 } else {
                     (level_leaf_count + 1) / 2
                 };
                 node_count += level_leaf_count;
-                //
             }
             node_count
         } else {
             0
         }
     }
+    /// Construct a new instance of the Merkle Tree.
     pub fn new(leaf_count: usize) -> Self {
         let max_capacity = MerkleTree::calculate_max_capacity(leaf_count);
         let mut nodes = Vec::with_capacity(max_capacity);
-        // for _ in 0..leaf_count {
-        //     nodes.push(DEFAULT_LEAF.into());
-        // }
+        for _ in 0..leaf_count {
+            nodes.push(DEFAULT_LEAF.into());
+        }
 
-        // (0..leaf_count)
-        //     .into_par_iter()
-        //     .for_each(|leaf_index| nodes[leaf_index] = DEFAULT_LEAF.into());
-        nodes.par_extend(
-            (0..leaf_count)
-                .into_par_iter()
-                .map(|_| Hash::from(DEFAULT_LEAF)),
-        );
         Self {
             leaf_count,
             nodes,
@@ -91,29 +85,32 @@ impl MerkleTree {
         }
     }
 
-    pub fn insert<T: AsRef<[u8]>>(self: &mut Self, leaf: T) -> Option<&mut Self> {
+    /// Inserts a single leaf into the tree.
+    pub fn insert<T: AsRef<[u8]>>(self: &mut Self, leaf: T) -> Result<&mut Self, MerkleTreeError> {
         if self.current_leaf_index == self.leaf_count {
-            return None;
+            return Err(MerkleTreeError::LeafIndexOutOfBounds(format!(
+                "New leaf exceeds size of tree: {}",
+                self.leaf_count,
+            )));
         }
 
         let leaf_node = hash_leaf!(leaf);
 
-        // println!(
-        //     "current_leaf_index: {} leaf {}",
-        //     self.current_leaf_index,
-        //     String::from_utf8(leaf.as_ref().to_vec()).unwrap()
-        // );
         if self.current_leaf_index == 0 {
             self.nodes[0] = leaf_node;
         } else {
             self.nodes[self.current_leaf_index] = leaf_node;
         }
         self.current_leaf_index += 1;
-        Some(self)
+        Ok(self)
     }
+
+    /// Returns the leaf at given index.
     pub fn get_value(self: &Self, leaf_index: usize) -> Option<&Hash> {
         self.nodes[0..self.leaf_count].get(leaf_index)
     }
+
+    /// Returns the Merkle Root of the tree.
     pub fn get_root(self: &mut Self) -> Option<&Hash> {
         let height = Self::calculate_height(self.leaf_count);
         let mut current_level: usize = height;
@@ -121,6 +118,7 @@ impl MerkleTree {
         let mut prev_level_len: usize = 0;
         let mut current_level_len: usize = self.leaf_count;
 
+        // This cache exists to avoid taking multiple mutable borrows on self.nodes
         let mut level_cache = Vec::with_capacity(current_level_len);
 
         let mut pairs = self.nodes.chunks(2);
@@ -147,28 +145,17 @@ impl MerkleTree {
                         .chunks(2);
                 }
             }
-            // if let Some([lnode, rnode]) = pair {
-            //     let inter_node = hash_node!(lnode, rnode);
-            //     level_cache.push(inter_node);
-            // } else if let Some([lnode]) = pair {
-            //     let inter_node = hash_node!(lnode, lnode);
-            //     level_cache.push(inter_node);
-            // } else {
-            //     self.nodes.append(&mut level_cache);
-            //     current_level -= 1;
-            //
-            //     prev_level_len += current_level_len;
-            //     current_level_len = Self::calculate_next_level_len(current_level_len);
-            //     level_cache = Vec::with_capacity(current_level_len);
-            //     pairs =
-            //         self.nodes[(prev_level_len)..(prev_level_len + current_level_len)].chunks(2);
-            // }
         }
         self.nodes.iter().last()
     }
-    pub fn get_opening(self: &Self, leaf_index: usize) -> Option<Vec<Hash>> {
-        if leaf_index > self.leaf_count - 1 {
-            return None;
+    /// Returns the opening for the tree.
+    /// Opening - A list of all partner nodes with which when hashed together computes to the root.
+    pub fn get_opening(self: &Self, leaf_index: usize) -> Result<Vec<Hash>, MerkleTreeError> {
+        if leaf_index >= self.leaf_count {
+            return Err(MerkleTreeError::LeafIndexOutOfBounds(format!(
+                "Tree has {} leaves but index given was {}",
+                self.leaf_count, leaf_index
+            )));
         };
         let height = Self::calculate_height(self.leaf_count);
         let mut current_index = leaf_index;
@@ -181,55 +168,144 @@ impl MerkleTree {
         let mut current_level_nodes = &self.nodes[0..self.leaf_count];
         let mut prev_level_len: usize = 0;
         while current_level > 0 {
-            match left_node {
-                Some(lnode) => path.push(lnode),
-                _ => {}
+            if let Some(lnode) = left_node {
+                path.push(lnode);
             }
-            match right_node {
-                Some(rnode) => path.push(rnode),
-                _ => {}
+
+            if let Some(rnode) = right_node {
+                path.push(rnode);
             }
+
             if current_index % 2 == 0 {
-                if current_index < current_level_len - 1 {
+                if current_index + 1 < current_level_len {
                     right_node = Some(current_level_nodes[current_index + 1]);
                 } else {
                     right_node = Some(current_level_nodes[current_index]);
                 }
+                left_node = None;
             } else {
                 left_node = Some(current_level_nodes[current_index - 1]);
                 right_node = None;
             }
-            println!(
-                "Level: {:?} Nodes: {:?} Index: {:?}",
-                current_level, current_level_nodes, current_index
-            );
             current_index /= 2;
             prev_level_len += current_level_len;
             current_level_len = Self::calculate_next_level_len(current_level_len);
             current_level -= 1;
+
             current_level_nodes = &self.nodes[prev_level_len..(prev_level_len + current_level_len)];
         }
 
-        Some(path)
+        Ok(path)
+    }
+
+    /// Returns a bool in a result signifying if the opening is valid and computes to the given root.
+    pub fn verify_opening(
+        self: &Self,
+        opening: Vec<Hash>,
+        root: Hash,
+        leaf_index: usize,
+    ) -> Result<bool, MerkleTreeError> {
+        if leaf_index >= self.leaf_count {
+            return Err(MerkleTreeError::LeafIndexOutOfBounds(format!(
+                "Tree has {} leaves but index given was {}",
+                self.leaf_count, leaf_index
+            )));
+        }
+
+        let leaf = self.nodes[leaf_index];
+        let mut computed_root = Hash::default();
+        for (i, item) in opening.into_iter().enumerate() {
+            if i == 0 {
+                // Since the opening doesn't contain the leaf node
+                computed_root = hash_node!(item, leaf);
+            } else {
+                computed_root = hash_node!(item, computed_root)
+            }
+        }
+        Ok(computed_root == root)
     }
 }
 
+#[derive(Error, Debug)]
+pub enum MerkleTreeError {
+    #[error("leaf index out of bounds")]
+    LeafIndexOutOfBounds(String),
+    #[error("Root not computed")]
+    RootNotComputed(String),
+}
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
-    use fast_math;
-    use hex;
-    use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree as RsTree};
+
     use solana_merkle_tree::MerkleTree as SMT;
     use solana_program::hash::{hashv, Hash};
-    const TEST: &[&[u8]] = &[
-        b"my", b"very", b"eager", b"mother", b"just", b"served", b"us", b"nine", b"pizzas",
-        b"make", b"prime",
+
+    pub const SAMPLE: &[&[u8]] = &[
+        b"lorem",
+        b"ipsum",
+        b"dolor",
+        b"sit",
+        b"amet",
+        b"consectetur",
+        b"adipiscing",
+        b"elit",
+        b"Integer",
+        b"iaculis",
     ];
-    const PROTO: &[&[u8]] = &[b"my", b"very", b"eager", b"mother"];
+
+    pub const EXPECTED: &str = "GWfs1rXnMA3AywiAEYq54Ms5MdB2esdCnVHK2j6SdMdY";
+
+    #[test]
+    fn test_calculate_valid_capacity() {
+        assert_eq!(MerkleTree::calculate_max_capacity(0), 0);
+        assert_eq!(MerkleTree::calculate_max_capacity(1), 1);
+        assert_eq!(MerkleTree::calculate_max_capacity(2), 3);
+        assert_eq!(MerkleTree::calculate_max_capacity(3), 6);
+        assert_eq!(MerkleTree::calculate_max_capacity(4), 7);
+        assert_eq!(MerkleTree::calculate_max_capacity(6), 12);
+        assert_eq!(MerkleTree::calculate_max_capacity(11), 23);
+        assert_eq!(MerkleTree::calculate_max_capacity(16), 31);
+        assert_eq!(MerkleTree::calculate_max_capacity(1024), 2047);
+    }
+    #[test]
+    fn test_calculate_valid_height() {
+        assert_eq!(MerkleTree::calculate_height(0), 0);
+        assert_eq!(MerkleTree::calculate_height(1), 0);
+        assert_eq!(MerkleTree::calculate_height(5), 3);
+        assert_eq!(MerkleTree::calculate_height(1024), 10);
+    }
+    #[test]
+    fn test_valid_merkle_root() {
+        let mut merkle_tree = MerkleTree::new(SAMPLE.len());
+
+        for leaf in SAMPLE {
+            merkle_tree.insert(leaf);
+        }
+
+        let root = merkle_tree.get_root();
+        matches!(root, Some(_));
+        assert_eq!(root.unwrap().to_string(), EXPECTED.to_string());
+    }
+    #[test]
+    fn test_valid_opening() {
+        let mut merkle_tree = MerkleTree::new(SAMPLE.len());
+
+        for leaf in SAMPLE {
+            merkle_tree.insert(leaf);
+        }
+        merkle_tree.get_root();
+
+        let opening = merkle_tree.get_opening(9).unwrap();
+        assert_eq!(opening.len(), 4);
+        let is_valid = merkle_tree.verify_opening(opening, Hash::from_str(EXPECTED).unwrap(), 9);
+        assert!(is_valid.is_ok());
+        assert!(is_valid.unwrap())
+    }
     #[test]
     fn tryit() {
-        let mut k = MerkleTree::new(4);
+        let mut k = MerkleTree::new(10);
         // println!("h2 {:?}", MerkleTree::calculate_max_capacity(10));
         // println!("h4 {:?}", MerkleTree::calculate_height(10));
         // println!("h4 {:?}", MerkleTree::calculate_height(8));
@@ -237,14 +313,12 @@ mod tests {
         // println!("h4 {:?}", MerkleTree::calculate_height(4));
         // println!("h4 {:?}", MerkleTree::calculate_height(2));
         // println!("h4 {:?}", MerkleTree::calculate_height(1));
-
-        for item in PROTO {
-            let res = k.insert(item);
+        for item in SAMPLE {
+            let _ = k.insert(item);
             // println!("res: {:?}", res.is_some());
         }
-        let root = k.get_root();
-        let opening = k.get_opening(3).unwrap();
-        println!("MY_MERKLE_ROOT: {:?}", opening);
+        // let root = k.get_root();
+        //let opening = k.get_opening(3).unwrap();
         // for (i, item) in k.nodes.iter().enumerate() {
         //     println!("INDEX: {:?} ITEM: {:?}", i, item);
         // }
@@ -262,8 +336,9 @@ mod tests {
         //     }
         //     }
         // println!("MY_PROOF: {:?}", verify_root);
-        let mt = SMT::new(PROTO);
-
-        println!("SOLANAS_MERKLE_ROOT: {:?}", mt.find_path(3));
+        let mt = SMT::new(SAMPLE);
+        //for item in mt.find_path(9).unwrap() {
+        println!("SOLANAS_MERKLE: {:?}", mt.find_path(9).unwrap());
+        println!("root: {:?}", mt.get_root());
     }
 }

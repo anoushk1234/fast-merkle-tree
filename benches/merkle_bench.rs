@@ -8,18 +8,6 @@ use {
     solana_sdk::signature::Signature,
 };
 
-pub const SAMPLE: &[&[u8]] = &[
-    b"lorem",
-    b"ipsum",
-    b"dolor",
-    b"sit",
-    b"amet",
-    b"consectetur",
-    b"adipiscing",
-    b"elit",
-    b"Integer",
-    b"iaculis",
-];
 fn benchmark_merkle_tree(b: &mut Bench) {
     let mut leaves = vec![];
     let leaf_count: usize = 1024;
