@@ -1,4 +1,4 @@
-# Elusiv Merkle Tree Assignment
+# Fast Merkle Tree
 
 
 ## Properties

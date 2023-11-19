@@ -1,5 +1,5 @@
 use {
-    elusiv_merkle_tree::{hash_leaf, MerkleTree as ElusivMerkleTree, LEAF_PREFIX},
+    fast_merkle_tree::{hash_leaf, MerkleTree as FastMerkleTree, LEAF_PREFIX},
     glassbench::*,
     rayon::prelude::*,
     solana_merkle_tree::MerkleTree as SolanaMerkleTree,
@@ -15,12 +15,12 @@ fn benchmark_merkle_tree(b: &mut Bench) {
     }
     b.task(
         format!(
-            "elusiv-merkle-tree | {} leaves | Insert sequential & get root",
+            "fast-merkle-tree | {} leaves | Insert sequential & get root",
             leaf_count
         ),
         |task| {
             task.iter(|| {
-                let mut merkle_tree = ElusivMerkleTree::new(leaf_count);
+                let mut merkle_tree = FastMerkleTree::new(leaf_count);
                 for leaf in leaves.clone() {
                     let _ = merkle_tree.insert(leaf);
                 }
@@ -44,12 +44,12 @@ fn benchmark_merkle_tree(b: &mut Bench) {
 
     b.task(
         format!(
-            "elusiv-merkle-tree | {} leaves | Insert parallel & get root",
+            "fast-merkle-tree | {} leaves | Insert parallel & get root",
             leaf_count
         ),
         |task| {
             task.iter(|| {
-                let mut merkle_tree = ElusivMerkleTree::new(leaf_count);
+                let mut merkle_tree = FastMerkleTree::new(leaf_count);
                 let hashed_leaves: Vec<Hash> =
                     leaves.par_iter().map(|leaf| hash_leaf!(leaf)).collect();
                 merkle_tree.nodes = hashed_leaves;
