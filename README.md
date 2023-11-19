@@ -8,6 +8,7 @@
 - Get an opening and also verify it against a root.
 - Hash functions are abstracted so you can replace it with another.
 - Default leaf is h(0)
+- Optionally uses multi processing
 
 ## Usage
 
@@ -73,3 +74,4 @@ in the heap saving us from overhead of making syscalls(due to context switching)
 1. AVX-512 Accelarated SHA256 - There are a few crates that do this.
 2. Custom Heap Allocator - We can make a custom allocator that allocs a single dram page and then every time we need to allocate to the heap for Vecs etc we can use the custom alloc to do that. This would save the extra overhead of making syscalls into the kernal. The [Hoard Allocator](https://www.cs.utexas.edu/users/mckinley/papers/asplos-2000.pdf) has this kind of functionality.
 3. Vectorize - Instead of having multiple variables to store various values we could use a single matrix/vector for the same. This would come at the cost of readability.
+4. Using Blake3 instead of SHA-256
